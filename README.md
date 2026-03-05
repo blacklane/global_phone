@@ -10,17 +10,17 @@ GlobalPhone parses, validates, and formats local and international phone numbers
 
 ## Installation
 
-1. Add the `global_phone` gem to your app. For example, using Bundler:
+1.  Add the `global_phone` gem to your app. For example, using Bundler:
 
         $ echo "gem 'global_phone'" >> Gemfile
         $ bundle install
 
-2. Use `global_phone_dbgen` to convert Google's libphonenumber `PhoneNumberMetaData.xml` file into a JSON database for GlobalPhone.
+2.  Use `global_phone_dbgen` to convert Google's libphonenumber `PhoneNumberMetaData.xml` file into a JSON database for GlobalPhone.
 
         $ gem install global_phone_dbgen
         $ global_phone_dbgen > db/global_phone.json
 
-3. Tell GlobalPhone where to find the database. For example, in a Rails app, create an initializer in `config/initializers/global_phone.rb`:
+3.  Tell GlobalPhone where to find the database. For example, in a Rails app, create an initializer in `config/initializers/global_phone.rb`:
 
     ```ruby
     require 'global_phone'
@@ -56,7 +56,7 @@ number.international_format
 # => "+1 312-555-1212"
 ```
 
-Is the number valid? (Note: this is not definitive. For example, the number here is "valid" by format, but there are no US numbers that start with 555. The `valid?` method may return false positives, but *should not* return false negatives unless the database is out of date.)
+Is the number valid? (Note: this is not definitive. For example, the number here is "valid" by format, but there are no US numbers that start with 555. The `valid?` method may return false positives, but _should not_ return false negatives unless the database is out of date.)
 
 ```ruby
 number.valid?
@@ -126,11 +126,19 @@ GlobalPhone.normalize("(0) 20-7031-3000", :gb)
 # => "+442070313000"
 ```
 
+## Breaking Change: Google `possibleLengths` Migration
+
+Google's [libphonenumber](https://github.com/google/libphonenumber) removed the `<possibleNumberPattern>` XML element and replaced it with `<possibleLengths>` attributes. This breaks the database generator — regenerating the JSON from the current XML produces `null` for all 254 territories, making every phone number fail to parse.
+
+This fork patches `database_generator.rb` to parse the new `<possibleLengths>` format, producing output consistent with Go libraries like [nyaruka/phonenumbers](https://github.com/nyaruka/phonenumbers) that already follow the latest XML changes.
+
+See [docs/issues](docs/issues/summary.md) for the full investigation and details on the fix.
+
 ## Caveats
 
 GlobalPhone currently does not parse emergency numbers or SMS short code numbers.
 
-Validation is not definitive and may return false positives, but *should not* return false negatives unless the database is out of date.
+Validation is not definitive and may return false positives, but _should not_ return false negatives unless the database is out of date.
 
 Territory heuristics are imprecise. Parsing a number will usually result in the territory being set to the primary territory of the region. For example, Canadian numbers will be parsed with a territory of `US`. (In most cases this does not matter, but if your application needs to perform geolocation using phone numbers, GlobalPhone may not be a good fit.)
 
@@ -148,13 +156,13 @@ GlobalPhone is heavily inspired by Andreas Gal's [PhoneNumber.js](https://github
 
 **1.0.1** (May 29, 2013)
 
-* GlobalPhone::Number#to_s returns the E.164 international string.
-* Ensure GlobalPhone::Number always returns strings for #national_format, #international_format, and #international_string, regardless of validity.
-* Relax format restrictions to more loosely match available national number patterns.
+- GlobalPhone::Number#to_s returns the E.164 international string.
+- Ensure GlobalPhone::Number always returns strings for #national_format, #international_format, and #international_string, regardless of validity.
+- Relax format restrictions to more loosely match available national number patterns.
 
 **1.0.0** (May 28, 2013)
 
-* Initial public release.
+- Initial public release.
 
 ### License
 
