@@ -3,7 +3,7 @@ require 'nokogiri'
 
 module GlobalPhone
   class DatabaseGenerator
-    VERSION = '1.0.0'
+    VERSION = '1.0.1'
 
     def self.load_file(filename)
       load(File.read(filename))
@@ -99,10 +99,40 @@ module GlobalPhone
       def compile_territory(node)
         [
           territory_name(node),
-          pattern(node, "generalDesc possibleNumberPattern"),
+          possible_lengths_pattern(node),
           pattern(node, "generalDesc nationalNumberPattern"),
           squish(node["nationalPrefixFormattingRule"])
         ]
+      end
+
+      def possible_lengths_pattern(node)
+        all_lengths = []
+        node.search("possibleLengths").each do |lengths_node|
+          national = lengths_node["national"]
+          local_only = lengths_node["localOnly"]
+          all_lengths += parse_length_values(national)
+          all_lengths += parse_length_values(local_only) if local_only
+        end
+
+        all_lengths.uniq!
+        return nil if all_lengths.empty?
+
+        min_len = all_lengths.min
+        max_len = all_lengths.max
+
+        if min_len == max_len
+          "\\d{#{min_len}}"
+        else
+          "\\d{#{min_len},#{max_len}}"
+        end
+      end
+
+      def parse_length_values(value)
+        return [] unless value
+        lengths = []
+        value.scan(/\[(\d+)-(\d+)\]/) { |a, b| lengths.concat((a.to_i..b.to_i).to_a) }
+        value.scan(/(?<!\[|\d|-)(\d+)(?![\d\-\]])/) { |m| lengths << m[0].to_i }
+        lengths
       end
 
       def compile_formats(territory_nodes)
